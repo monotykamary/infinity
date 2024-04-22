@@ -26,6 +26,21 @@ from infinity_emb.primitives import (
     PoolingMethod,
 )
 
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+import os
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+async def validate_token(token: str = Depends(oauth2_scheme)):
+    correct_token = os.getenv("INFINITY_API_KEY")
+    if token != correct_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 
 def create_server(
     *,
@@ -120,6 +135,7 @@ def create_server(
         f"{url_prefix}/models",
         response_model=OpenAIModelInfo,
         response_class=responses.ORJSONResponse,
+        dependencies=[Depends(validate_token)],
     )
     async def _models():
         """get models endpoint"""
@@ -162,6 +178,7 @@ def create_server(
         f"{url_prefix}/embeddings",
         response_model=OpenAIEmbeddingResult,
         response_class=responses.ORJSONResponse,
+        dependencies=[Depends(validate_token)],
     )
     async def _embeddings(data: OpenAIEmbeddingInput):
         """Encode Embeddings
@@ -202,6 +219,7 @@ def create_server(
         f"{url_prefix}/rerank",
         # response_model=RerankResult,
         response_class=responses.ORJSONResponse,
+        dependencies=[Depends(validate_token)],
     )
     async def _rerank(data: RerankInput):
         """Encode Embeddings
